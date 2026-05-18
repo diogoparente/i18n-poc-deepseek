@@ -92,7 +92,7 @@ jobs:
           if [ -n "$(git status --porcelain locales/)" ]; then
             git add locales/
             git commit -m "chore(i18n): update translations [skip ci]"
-            git push
+            git push origin HEAD:$GITHUB_REF_NAME
           else
             echo "No translation changes needed."
           fi
