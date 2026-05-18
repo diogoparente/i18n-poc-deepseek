@@ -1,0 +1,84 @@
+name: i18n Translate
+
+on:
+  push:
+    paths:
+      - locales/en.json
+
+permissions:
+  contents: write
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Actions i18n Bot"
+          git config user.email "ci-bot@example.com"
+
+      - name: Translate locales
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          TARGET_LOCALES="pt.json fr.json"
+          SOURCE_LOCALE="locales/en.json"
+
+          for TARGET in $TARGET_LOCALES; do
+            TARGET_PATH="locales/$TARGET"
+            TARGET_LANG="${TARGET%.json}"
+
+            echo "Processing $TARGET_LANG..."
+
+            # Get the previous version of en.json for context (if exists)
+            OLD_EN=$(git show HEAD~1:$SOURCE_LOCALE 2>/dev/null || echo "{}")
+            NEW_EN=$(cat $SOURCE_LOCALE)
+            CURRENT_TARGET=$(cat $TARGET_PATH 2>/dev/null || echo "{}")
+
+            # Construct the prompt
+            PROMPT="You are an expert translator. Act as a JSON diff and translation engine.
+            Compare the old English JSON with the new English JSON to identify changed or added keys.
+            Translate those changes into '$TARGET_LANG' using the current '$TARGET_LANG' JSON as context for style and existing keys.
+            Return a complete, valid, and properly formatted JSON file for '$TARGET_LANG' that includes all existing keys plus the new translations.
+            Do not include any explanations, markdown formatting, or code blocks in your response. Return ONLY the raw JSON.
+
+            Old English: $OLD_EN
+            New English: $NEW_EN
+            Current $TARGET_LANG: $CURRENT_TARGET"
+
+            # Prepare the API payload using jq to ensure proper escaping
+            PAYLOAD=$(jq -n --arg prompt "$PROMPT" '{model: "deepseek-chat", messages: [{role: "user", content: $prompt}]}')
+
+            # Call DeepSeek API
+            RESPONSE=$(curl -s -f -X POST \
+              "https://api.deepseek.com/v1/chat/completions" \
+              -H "Content-Type: application/json" \
+              -H "Authorization: Bearer ${DEEPSEEK_API_KEY}" \
+              -d "$PAYLOAD")
+
+            # Extract and validate the JSON from the response
+            RESULT_JSON=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+
+            if echo "$RESULT_JSON" | jq -e . > /dev/null 2>&1; then
+              echo "$RESULT_JSON" > "$TARGET_PATH"
+              echo "Successfully updated $TARGET_PATH"
+            else
+              echo "Error: DeepSeek returned invalid JSON for $TARGET_LANG"
+              echo "Response snippet: $(echo "$RESULT_JSON" | head -n 5)"
+              exit 1
+            fi
+          done
+
+      - name: Commit and push translations
+        run: |
+          if [ -n "$(git status --porcelain locales/)" ]; then
+            git add locales/
+            git commit -m "chore(i18n): update translations [skip ci]"
+            git push
+          else
+            echo "No translation changes needed."
+          fi
