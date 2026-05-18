@@ -30,9 +30,23 @@ jobs:
 
           for TARGET in $TARGET_LOCALES; do
             TARGET_PATH="locales/$TARGET"
-            TARGET_LANG="${TARGET%.json}"
+            TARGET_CODE="${TARGET%.json}"
 
-            echo "Processing $TARGET_LANG..."
+            # Map locale code to full language name
+            case "$TARGET_CODE" in
+              pt) TARGET_LANG="Portuguese" ;;
+              fr) TARGET_LANG="French" ;;
+              es) TARGET_LANG="Spanish" ;;
+              de) TARGET_LANG="German" ;;
+              it) TARGET_LANG="Italian" ;;
+              ja) TARGET_LANG="Japanese" ;;
+              ko) TARGET_LANG="Korean" ;;
+              zh) TARGET_LANG="Chinese" ;;
+              ru) TARGET_LANG="Russian" ;;
+              *)  TARGET_LANG="$TARGET_CODE" ;;
+            esac
+
+            echo "Processing $TARGET_CODE ($TARGET_LANG)..."
 
             # Get the previous version of en.json for context (if exists)
             OLD_EN=$(git show HEAD~1:$SOURCE_LOCALE 2>/dev/null || echo "{}")
