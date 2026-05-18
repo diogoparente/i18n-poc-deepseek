@@ -1,0 +1,6 @@
+{
+  "foo": "Bar",
+  "oldKey": {
+    "test": "algum valor de chave antigo"
+  }
+}
