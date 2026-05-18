@@ -1,6 +1,6 @@
 {
   "foo": "Bar",
   "oldKey": {
-    "oldNestedKey": "some old key value"
+    "test": "some old key value"
   }
 }

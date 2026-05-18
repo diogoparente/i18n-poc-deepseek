@@ -78,7 +78,7 @@ jobs:
             RESULT_JSON=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
 
             if echo "$RESULT_JSON" | jq -e . > /dev/null 2>&1; then
-              echo "$RESULT_JSON" > "$TARGET_PATH"
+              echo "$RESULT_JSON" | jq . > "$TARGET_PATH"
               echo "Successfully updated $TARGET_PATH"
             else
               echo "Error: DeepSeek returned invalid JSON for $TARGET_LANG"
